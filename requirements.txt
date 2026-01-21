@@ -1,0 +1,42 @@
+# Core Framework
+streamlit
+
+# Data Processing & Visualization
+pandas
+plotly
+numpy
+
+# PDF/DOCX/Excel Processing
+PyPDF2
+python-docx
+openpyxl
+
+# AI & LangChain
+langchain
+langchain-openai
+langchain-community
+openai
+
+# Vector Database
+faiss-cpu
+
+# Language Detection & Translation
+langdetect
+deep-translator
+
+# Web Scraping
+requests
+beautifulsoup4
+
+# OCR (Optical Character Recognition)
+pytesseract
+Pillow
+
+# Machine Learning (for confidence scoring)
+scikit-learn
+
+# Communication Integrations
+twilio
+
+# Database (SQLite comes built-in with Python)
+# sqlite3 is included in Python standard library
