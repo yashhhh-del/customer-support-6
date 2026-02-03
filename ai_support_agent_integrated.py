@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import uuid
 import time
-import os
 import json
 import sqlite3
 from typing import List, Dict, Optional, Tuple
@@ -20,7 +19,7 @@ try:
     import openpyxl
     from openpyxl import load_workbook
 except ImportError:
-    st.warning("Please install: pip install PyPDF2 python-docx openpyxl")
+    st.warning("⚠️ Please install: pip install PyPDF2 python-docx openpyxl")
 
 # For email functionality
 try:
@@ -32,14 +31,14 @@ try:
     import imaplib
     import email
 except ImportError:
-    st.warning("Email libraries not available")
+    st.warning("⚠️ Email libraries not available")
 
 # For WhatsApp integration
 try:
     import webbrowser
     import urllib.parse
 except ImportError:
-    st.warning("WhatsApp libraries not available")
+    st.warning("⚠️ WhatsApp libraries not available")
 
 # For vector database and embeddings
 try:
@@ -50,93 +49,376 @@ try:
     from langchain.docstore.document import Document as LangchainDocument
     from langchain.prompts import PromptTemplate
 except ImportError:
-    st.warning("Please install: pip install langchain langchain-openai langchain-community faiss-cpu")
+    st.warning("⚠️ Please install: pip install langchain langchain-openai langchain-community faiss-cpu")
 
 # For language detection and translation
 try:
     from langdetect import detect, LangDetectException
     from deep_translator import GoogleTranslator
 except ImportError:
-    st.warning("Please install: pip install langdetect deep-translator")
+    st.warning("⚠️ Please install: pip install langdetect deep-translator")
 
 # For web scraping
 try:
     import requests
     from bs4 import BeautifulSoup
 except ImportError:
-    st.warning("Please install: pip install requests beautifulsoup4")
+    st.warning("⚠️ Please install: pip install requests beautifulsoup4")
 
 # For OCR
 try:
     import pytesseract
     from PIL import Image
 except ImportError:
-    st.warning("Please install: pip install pytesseract Pillow")
+    st.warning("⚠️ Please install: pip install pytesseract Pillow")
 
 # For semantic similarity (confidence scoring)
 try:
     from sklearn.metrics.pairwise import cosine_similarity
     import numpy as np
 except ImportError:
-    st.warning("Please install: pip install scikit-learn numpy")
+    st.warning("⚠️ Please install: pip install scikit-learn numpy")
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Support Agent",
+    page_title="AI Support Agent Pro",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Enhanced Custom CSS with better color contrast
 st.markdown("""
 <style>
+    /* Main theme colors with high contrast */
+    :root {
+        --primary-blue: #0066CC;
+        --primary-dark: #003D7A;
+        --success-green: #00A86B;
+        --warning-orange: #FF8C00;
+        --danger-red: #DC143C;
+        --bg-light: #F8F9FA;
+        --bg-white: #FFFFFF;
+        --text-dark: #212529;
+        --text-light: #6C757D;
+        --border-color: #DEE2E6;
+    }
+    
+    /* Header styling */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #0066CC 0%, #00A86B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
         margin-bottom: 2rem;
-    }
-    .chat-message {
         padding: 1rem;
-        border-radius: 0.5rem;
+    }
+    
+    .sub-header {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary-dark);
         margin-bottom: 1rem;
+        border-bottom: 3px solid var(--primary-blue);
+        padding-bottom: 0.5rem;
     }
+    
+    /* Chat message styling with high contrast */
+    .chat-message {
+        padding: 1.2rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color);
+    }
+    
     .user-message {
-        background-color: #e3f2fd;
-        margin-left: 2rem;
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        margin-left: 3rem;
+        border-left: 4px solid #0066CC;
+        color: #003D7A;
     }
+    
     .bot-message {
-        background-color: #f5f5f5;
-        margin-right: 2rem;
+        background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%);
+        margin-right: 3rem;
+        border-left: 4px solid #00A86B;
+        color: #212529;
     }
-    .ticket-card {
-        padding: 1rem;
-        border: 1px solid #ddd;
-        border-radius: 0.5rem;
-        margin-bottom: 0.5rem;
+    
+    /* Confidence badges with high contrast */
+    .confidence-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        margin: 0 4px;
     }
+    
     .confidence-high {
-        color: #2ecc71;
-        font-weight: bold;
+        background-color: #00A86B;
+        color: #FFFFFF;
     }
+    
     .confidence-medium {
-        color: #f39c12;
-        font-weight: bold;
+        background-color: #FF8C00;
+        color: #FFFFFF;
     }
+    
     .confidence-low {
-        color: #e74c3c;
-        font-weight: bold;
+        background-color: #DC143C;
+        color: #FFFFFF;
     }
+    
+    /* Ticket card styling */
+    .ticket-card {
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        background: var(--bg-white);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .ticket-card:hover {
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    /* Priority badges */
+    .priority-high {
+        background-color: #DC143C;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    
+    .priority-medium {
+        background-color: #FF8C00;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    
+    .priority-low {
+        background-color: #00A86B;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    
+    /* Status badges */
+    .status-open {
+        background-color: #0066CC;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .status-progress {
+        background-color: #FF8C00;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .status-closed {
+        background-color: #6C757D;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    /* Contact banner with excellent contrast */
+    .contact-banner {
+        background: linear-gradient(135deg, #0066CC 0%, #00A86B 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    
+    .contact-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        min-width: 280px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .contact-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .contact-card h4 {
+        color: var(--primary-dark);
+        margin-top: 0;
+        font-weight: 700;
+    }
+    
+    .contact-card p {
+        color: var(--text-dark);
+        font-size: 1rem;
+        font-weight: 500;
+        margin: 10px 0;
+    }
+    
+    /* Buttons with high contrast */
     .whatsapp-button {
         background-color: #25D366;
         color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 12px 24px;
+        border-radius: 8px;
         text-decoration: none;
         display: inline-block;
-        margin: 5px;
+        margin: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid #128C7E;
+    }
+    
+    .whatsapp-button:hover {
+        background-color: #128C7E;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+    }
+    
+    .email-button {
+        background-color: #0066CC;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        margin: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid #003D7A;
+    }
+    
+    .email-button:hover {
+        background-color: #003D7A;
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.4);
+    }
+    
+    /* Metric cards with better visibility */
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 2px solid var(--border-color);
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-blue);
+    }
+    
+    .metric-label {
+        font-size: 1rem;
+        color: var(--text-light);
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    /* Info boxes with high contrast */
+    .info-box {
+        background: #E3F2FD;
+        border-left: 5px solid #0066CC;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        color: #003D7A;
+        font-weight: 500;
+    }
+    
+    .success-box {
+        background: #D4EDDA;
+        border-left: 5px solid #00A86B;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        color: #155724;
+        font-weight: 500;
+    }
+    
+    .warning-box {
+        background: #FFF3CD;
+        border-left: 5px solid #FF8C00;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        color: #856404;
+        font-weight: 500;
+    }
+    
+    .error-box {
+        background: #F8D7DA;
+        border-left: 5px solid #DC143C;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        color: #721C24;
+        font-weight: 500;
+    }
+    
+    /* Sidebar styling */
+    .sidebar .sidebar-content {
+        background-color: var(--bg-light);
+    }
+    
+    /* Table styling */
+    .dataframe {
+        border: 2px solid var(--border-color) !important;
+    }
+    
+    .dataframe th {
+        background-color: var(--primary-blue) !important;
+        color: white !important;
+        font-weight: 700 !important;
+    }
+    
+    .dataframe td {
+        color: var(--text-dark) !important;
+    }
+    
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background-color: var(--bg-light);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: 2rem;
+        background: var(--bg-light);
+        border-top: 3px solid var(--primary-blue);
+        margin-top: 3rem;
+        color: var(--text-dark);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -156,11 +438,11 @@ def init_database():
     c.execute('''CREATE TABLE IF NOT EXISTS tickets
                  (id TEXT PRIMARY KEY, query TEXT, language TEXT, category TEXT, 
                   status TEXT, priority TEXT, assigned_to TEXT, timestamp TEXT, 
-                  resolved_at TEXT, resolution_time REAL)''')
+                  resolved_at TEXT, resolution_time REAL, channel TEXT)''')
     
     # Feedback table
     c.execute('''CREATE TABLE IF NOT EXISTS feedback
-                 (chat_id TEXT, feedback TEXT, timestamp TEXT)''')
+                 (chat_id TEXT, feedback TEXT, timestamp TEXT, comment TEXT)''')
     
     # Analytics table
     c.execute('''CREATE TABLE IF NOT EXISTS analytics
@@ -185,7 +467,7 @@ if 'analytics' not in st.session_state:
         'answered': 0,
         'escalated': 0,
         'languages': {'English': 0, 'Hindi': 0, 'Marathi': 0, 'Other': 0},
-        'categories': {'Billing': 0, 'Technical': 0, 'General': 0}
+        'categories': {'Billing': 0, 'Technical': 0, 'General': 0, 'Product': 0}
     }
 if 'vector_store' not in st.session_state:
     st.session_state.vector_store = None
@@ -208,16 +490,18 @@ if 'whatsapp_messages' not in st.session_state:
     st.session_state.whatsapp_messages = []
 if 'gmail_config' not in st.session_state:
     st.session_state.gmail_config = {
-        'email': 'Callistoitsolutions1@gmail.com',
+        'email': 'support@yourcompany.com',
         'smtp_server': 'smtp.gmail.com',
         'smtp_port': 587,
         'imap_server': 'imap.gmail.com'
     }
 if 'whatsapp_config' not in st.session_state:
     st.session_state.whatsapp_config = {
-        'phone_number': '+917057205423',
-        'wa_link': 'https://wa.me/917057205423'
+        'phone_number': '+1234567890',
+        'wa_link': 'https://wa.me/1234567890'
     }
+if 'kb_processed' not in st.session_state:
+    st.session_state.kb_processed = False
 
 # Helper Functions
 def extract_text_from_pdf(file) -> str:
@@ -229,7 +513,7 @@ def extract_text_from_pdf(file) -> str:
             text += page.extract_text() + "\n"
         return text
     except Exception as e:
-        st.error(f"Error reading PDF: {str(e)}")
+        st.error(f"❌ Error reading PDF: {str(e)}")
         return ""
 
 def extract_text_from_docx(file) -> str:
@@ -239,7 +523,7 @@ def extract_text_from_docx(file) -> str:
         text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
         return text
     except Exception as e:
-        st.error(f"Error reading DOCX: {str(e)}")
+        st.error(f"❌ Error reading DOCX: {str(e)}")
         return ""
 
 def extract_text_from_excel(file) -> str:
@@ -260,7 +544,7 @@ def extract_text_from_excel(file) -> str:
         wb.close()
         return text
     except Exception as e:
-        st.error(f"Error reading Excel file: {str(e)}")
+        st.error(f"❌ Error reading Excel file: {str(e)}")
         return ""
 
 def extract_text_from_image(image_file) -> str:
@@ -270,7 +554,7 @@ def extract_text_from_image(image_file) -> str:
         text = pytesseract.image_to_string(image)
         return text
     except Exception as e:
-        st.error(f"Error performing OCR: {str(e)}")
+        st.error(f"❌ Error performing OCR: {str(e)}")
         return ""
 
 def scrape_url(url: str) -> str:
@@ -294,7 +578,7 @@ def scrape_url(url: str) -> str:
         
         return text
     except Exception as e:
-        st.error(f"Error scraping URL {url}: {str(e)}")
+        st.error(f"❌ Error scraping URL {url}: {str(e)}")
         return ""
 
 def detect_language(text: str) -> str:
@@ -304,7 +588,10 @@ def detect_language(text: str) -> str:
         lang_map = {
             'en': 'English',
             'hi': 'Hindi',
-            'mr': 'Marathi'
+            'mr': 'Marathi',
+            'es': 'Spanish',
+            'fr': 'French',
+            'de': 'German'
         }
         return lang_map.get(lang_code, 'Other')
     except:
@@ -318,7 +605,10 @@ def translate_text(text: str, target_lang: str) -> str:
         
         lang_code_map = {
             'Hindi': 'hi',
-            'Marathi': 'mr'
+            'Marathi': 'mr',
+            'Spanish': 'es',
+            'French': 'fr',
+            'German': 'de'
         }
         
         target_code = lang_code_map.get(target_lang, 'en')
@@ -326,27 +616,33 @@ def translate_text(text: str, target_lang: str) -> str:
         translated = translator.translate(text)
         return translated
     except Exception as e:
-        st.warning(f"Translation failed: {str(e)}")
+        st.warning(f"⚠️ Translation failed: {str(e)}")
         return text
 
 def categorize_query(query: str) -> str:
-    """Keyword-based categorization with AI enhancement"""
+    """Enhanced keyword-based categorization"""
     query_lower = query.lower()
     
     billing_keywords = ['payment', 'invoice', 'bill', 'charge', 'refund', 'price', 'cost', 
-                       'subscription', 'card', 'billing', 'money', 'paid']
+                       'subscription', 'card', 'billing', 'money', 'paid', 'transaction']
     technical_keywords = ['error', 'bug', 'issue', 'problem', 'not working', 'broken', 
-                         'crash', 'slow', 'loading', 'login', 'access', 'technical']
+                         'crash', 'slow', 'loading', 'login', 'access', 'technical', 'password',
+                         'installation', 'update', 'sync']
+    product_keywords = ['feature', 'how to', 'tutorial', 'guide', 'demo', 'product', 
+                       'functionality', 'use', 'work', 'setup', 'configure']
     
     billing_score = sum(1 for keyword in billing_keywords if keyword in query_lower)
     technical_score = sum(1 for keyword in technical_keywords if keyword in query_lower)
+    product_score = sum(1 for keyword in product_keywords if keyword in query_lower)
     
-    if billing_score > technical_score and billing_score > 0:
-        return 'Billing'
-    elif technical_score > 0:
-        return 'Technical'
-    else:
-        return 'General'
+    scores = {
+        'Billing': billing_score,
+        'Technical': technical_score,
+        'Product': product_score
+    }
+    
+    max_category = max(scores, key=scores.get)
+    return max_category if scores[max_category] > 0 else 'General'
 
 def assign_priority(confidence: float, category: str) -> str:
     """Assign priority based on confidence and category"""
@@ -375,7 +671,7 @@ def create_vector_store(text: str, openai_api_key: str):
         
         return vector_store
     except Exception as e:
-        st.error(f"Error creating vector store: {str(e)}")
+        st.error(f"❌ Error creating vector store: {str(e)}")
         return None
 
 def calculate_semantic_confidence(query: str, retrieved_docs: List, answer: str, embeddings) -> float:
@@ -403,7 +699,7 @@ def calculate_semantic_confidence(query: str, retrieved_docs: List, answer: str,
         
         return float(min(max(confidence, 0.0), 1.0))
     except Exception as e:
-        st.warning(f"Confidence calculation error: {str(e)}")
+        st.warning(f"⚠️ Confidence calculation error: {str(e)}")
         return 0.7 if len(retrieved_docs) > 0 and len(answer) > 50 else 0.4
 
 def get_ai_response(query: str, vector_store, openai_api_key: str, target_language: str = 'English') -> Tuple[str, float, List]:
@@ -423,15 +719,15 @@ def get_ai_response(query: str, vector_store, openai_api_key: str, target_langua
             openai_api_key=openai_api_key
         )
         
-        prompt_template = """You are a helpful customer support assistant. 
-        Use the following context to answer the question. If you cannot find the answer in the context, 
-        say so politely and suggest contacting support.
+        prompt_template = """You are a helpful and professional customer support assistant. 
+        Use the following context to answer the question accurately and concisely. 
+        If you cannot find the answer in the context, politely inform the customer and suggest contacting support for further assistance.
         
         Context: {context}
         
         Question: {question}
         
-        Provide a helpful, accurate answer:"""
+        Provide a helpful, accurate, and friendly answer:"""
         
         PROMPT = PromptTemplate(
             template=prompt_template,
@@ -463,8 +759,8 @@ def get_ai_response(query: str, vector_store, openai_api_key: str, target_langua
         
         return answer, confidence, source_docs
     except Exception as e:
-        st.error(f"Error getting AI response: {str(e)}")
-        error_msg = "I apologize, but I encountered an error processing your query."
+        st.error(f"❌ Error getting AI response: {str(e)}")
+        error_msg = "I apologize, but I encountered an error processing your query. Please try again or contact support."
         if target_language != 'English':
             error_msg = translate_text(error_msg, target_language)
         return error_msg, 0.3, []
@@ -473,11 +769,11 @@ def create_ticket(query: str, language: str, category: str, confidence: float, c
     """Create escalation ticket with priority and assignment"""
     priority = assign_priority(confidence, category)
     
-    agents = ['Agent A', 'Agent B', 'Agent C']
+    agents = ['Agent A', 'Agent B', 'Agent C', 'Agent D']
     assigned_to = agents[len(st.session_state.tickets) % len(agents)]
     
     ticket = {
-        'id': str(uuid.uuid4())[:8],
+        'id': str(uuid.uuid4())[:8].upper(),
         'query': query,
         'language': language,
         'category': category,
@@ -495,10 +791,11 @@ def create_ticket(query: str, language: str, category: str, confidence: float, c
     
     conn = st.session_state.db_conn
     c = conn.cursor()
-    c.execute('''INSERT INTO tickets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+    c.execute('''INSERT INTO tickets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
               (ticket['id'], ticket['query'], ticket['language'], ticket['category'],
                ticket['status'], ticket['priority'], ticket['assigned_to'], 
-               ticket['timestamp'], ticket['resolved_at'], ticket['resolution_time']))
+               ticket['timestamp'], ticket['resolved_at'], ticket['resolution_time'],
+               ticket['channel']))
     conn.commit()
     
     return ticket['id']
@@ -537,7 +834,7 @@ def update_daily_analytics():
                    analytics.get('escalated', 0), avg_response_time, avg_confidence))
         conn.commit()
     except Exception as e:
-        st.error(f"Error updating analytics: {str(e)}")
+        st.error(f"❌ Error updating analytics: {str(e)}")
 
 def send_gmail(to_email: str, subject: str, message: str, app_password: str) -> bool:
     """Send email via Gmail SMTP"""
@@ -559,7 +856,7 @@ def send_gmail(to_email: str, subject: str, message: str, app_password: str) -> 
         
         return True
     except Exception as e:
-        st.error(f"Gmail sending failed: {str(e)}")
+        st.error(f"❌ Gmail sending failed: {str(e)}")
         return False
 
 def check_gmail_inbox(app_password: str, max_emails: int = 10) -> List[Dict]:
@@ -604,7 +901,7 @@ def check_gmail_inbox(app_password: str, max_emails: int = 10) -> List[Dict]:
         
         return emails
     except Exception as e:
-        st.error(f"Error checking Gmail: {str(e)}")
+        st.error(f"❌ Error checking Gmail: {str(e)}")
         return []
 
 def create_whatsapp_link(phone_number: str, message: str) -> str:
@@ -641,118 +938,250 @@ def process_multi_channel_query(query: str, channel: str, openai_api_key: str,
     ticket_id = None
     if confidence < 0.6:
         ticket_id = create_ticket(query, language, category, confidence, channel)
-        escalation_msg = f"\n\n⚠️ This query has been escalated. Ticket ID: {ticket_id}"
+        escalation_msg = f"\n\n⚠️ This query has been escalated to our support team. Ticket ID: {ticket_id}"
         if language != 'English':
             escalation_msg = translate_text(escalation_msg, language)
         answer += escalation_msg
     
     return answer, confidence, ticket_id
 
-# Sidebar - Knowledge Management
-st.sidebar.title("📚 Knowledge Base Management")
-
-openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password", help="Enter your OpenAI API key")
-
-st.sidebar.markdown("---")
-
-uploaded_files = st.sidebar.file_uploader(
-    "Upload PDF/DOCX/Excel/Image files",
-    type=['pdf', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'],
-    accept_multiple_files=True
-)
-
-url_input = st.sidebar.text_area("Enter URLs (one per line)", height=100)
-
-if st.sidebar.button("🔄 Process Knowledge Base", type="primary"):
-    if not openai_api_key:
-        st.sidebar.error("Please enter your OpenAI API key first!")
+def get_confidence_badge(confidence: float) -> str:
+    """Generate HTML badge for confidence score"""
+    if confidence >= 0.7:
+        return f'<span class="confidence-badge confidence-high">🟢 High: {confidence:.1%}</span>'
+    elif confidence >= 0.5:
+        return f'<span class="confidence-badge confidence-medium">🟡 Medium: {confidence:.1%}</span>'
     else:
-        with st.spinner("Processing knowledge base..."):
-            all_text = ""
-            
-            if uploaded_files:
-                progress_bar = st.sidebar.progress(0)
-                for idx, file in enumerate(uploaded_files):
-                    if file.name.endswith('.pdf'):
-                        all_text += extract_text_from_pdf(file) + "\n\n"
-                    elif file.name.endswith('.docx'):
-                        all_text += extract_text_from_docx(file) + "\n\n"
-                    elif file.name.endswith(('.xlsx', '.xls')):
-                        excel_text = extract_text_from_excel(file)
-                        if excel_text:
-                            all_text += f"[Excel file: {file.name}]\n{excel_text}\n\n"
-                    elif file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        ocr_text = extract_text_from_image(file)
-                        if ocr_text:
-                            all_text += f"[OCR from {file.name}]\n{ocr_text}\n\n"
-                    
-                    progress_bar.progress((idx + 1) / len(uploaded_files))
-                progress_bar.empty()
-            
-            if url_input.strip():
-                urls = [url.strip() for url in url_input.split('\n') if url.strip()]
-                progress_bar = st.sidebar.progress(0)
-                for idx, url in enumerate(urls):
-                    st.sidebar.info(f"Scraping: {url[:50]}...")
-                    scraped_text = scrape_url(url)
-                    if scraped_text:
-                        all_text += f"[Content from {url}]\n{scraped_text}\n\n"
-                    progress_bar.progress((idx + 1) / len(urls))
-                progress_bar.empty()
-            
-            if all_text.strip():
-                st.session_state.knowledge_base_text = all_text
-                st.session_state.vector_store = create_vector_store(all_text, openai_api_key)
-                
-                if st.session_state.vector_store:
-                    st.sidebar.success(f"✅ Processed {len(all_text)} characters successfully!")
-                else:
-                    st.sidebar.error("Failed to create vector store")
-            else:
-                st.sidebar.warning("No content to process. Please upload files or enter URLs.")
+        return f'<span class="confidence-badge confidence-low">🔴 Low: {confidence:.1%}</span>'
 
-if st.session_state.vector_store:
-    st.sidebar.success("✅ Knowledge Base Active")
-    st.sidebar.metric("KB Size", f"{len(st.session_state.knowledge_base_text):,} chars")
+def get_priority_badge(priority: str) -> str:
+    """Generate HTML badge for priority"""
+    return f'<span class="priority-{priority.lower()}">{priority}</span>'
+
+def get_status_badge(status: str) -> str:
+    """Generate HTML badge for status"""
+    status_map = {
+        'Open': 'open',
+        'In Progress': 'progress',
+        'Closed': 'closed'
+    }
+    return f'<span class="status-{status_map.get(status, "open")}">{status}</span>'
+
+# Sidebar - Knowledge Management
+with st.sidebar:
+    st.markdown("### 📚 Knowledge Base")
     
-    num_docs = st.session_state.vector_store.index.ntotal if st.session_state.vector_store else 0
-    st.sidebar.metric("Indexed Documents", num_docs)
-else:
-    st.sidebar.info("ℹ️ No knowledge base loaded")
+    openai_api_key = st.text_input(
+        "🔑 OpenAI API Key", 
+        type="password", 
+        help="Enter your OpenAI API key to enable AI features"
+    )
+    
+    st.markdown("---")
+    
+    # Configuration section
+    with st.expander("⚙️ System Configuration"):
+        st.markdown("**📧 Email Settings**")
+        gmail_email = st.text_input("Gmail Address", value=st.session_state.gmail_config['email'])
+        
+        st.markdown("**💬 WhatsApp Settings**")
+        whatsapp_phone = st.text_input("WhatsApp Number", value=st.session_state.whatsapp_config['phone_number'])
+        
+        if st.button("💾 Save Configuration"):
+            st.session_state.gmail_config['email'] = gmail_email
+            st.session_state.whatsapp_config['phone_number'] = whatsapp_phone
+            st.session_state.whatsapp_config['wa_link'] = f'https://wa.me/{whatsapp_phone.replace("+", "")}'
+            st.success("✅ Configuration saved!")
+    
+    st.markdown("---")
+    
+    # File upload section
+    st.markdown("**📁 Upload Knowledge Base**")
+    uploaded_files = st.file_uploader(
+        "Upload documents",
+        type=['pdf', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'],
+        accept_multiple_files=True,
+        help="Supported: PDF, DOCX, Excel, Images (OCR)"
+    )
+    
+    # URL input section
+    url_input = st.text_area(
+        "🌐 Or enter URLs (one per line)", 
+        height=100,
+        help="Enter website URLs to scrape content"
+    )
+    
+    # Process button
+    if st.button("🚀 Process Knowledge Base", type="primary", use_container_width=True):
+        if not openai_api_key:
+            st.error("❌ Please enter your OpenAI API key first!")
+        else:
+            with st.spinner("🔄 Processing knowledge base..."):
+                all_text = ""
+                
+                # Process uploaded files
+                if uploaded_files:
+                    progress_bar = st.progress(0)
+                    for idx, file in enumerate(uploaded_files):
+                        file_type = file.name.split('.')[-1].lower()
+                        st.info(f"📄 Processing: {file.name}")
+                        
+                        if file_type == 'pdf':
+                            all_text += f"\n[PDF: {file.name}]\n{extract_text_from_pdf(file)}\n\n"
+                        elif file_type == 'docx':
+                            all_text += f"\n[DOCX: {file.name}]\n{extract_text_from_docx(file)}\n\n"
+                        elif file_type in ['xlsx', 'xls']:
+                            excel_text = extract_text_from_excel(file)
+                            if excel_text:
+                                all_text += f"\n[Excel: {file.name}]\n{excel_text}\n\n"
+                        elif file_type in ['png', 'jpg', 'jpeg']:
+                            ocr_text = extract_text_from_image(file)
+                            if ocr_text:
+                                all_text += f"\n[Image OCR: {file.name}]\n{ocr_text}\n\n"
+                        
+                        progress_bar.progress((idx + 1) / len(uploaded_files))
+                    progress_bar.empty()
+                
+                # Process URLs
+                if url_input.strip():
+                    urls = [url.strip() for url in url_input.split('\n') if url.strip()]
+                    progress_bar = st.progress(0)
+                    for idx, url in enumerate(urls):
+                        st.info(f"🌐 Scraping: {url[:50]}...")
+                        scraped_text = scrape_url(url)
+                        if scraped_text:
+                            all_text += f"\n[URL: {url}]\n{scraped_text}\n\n"
+                        progress_bar.progress((idx + 1) / len(urls))
+                    progress_bar.empty()
+                
+                # Create vector store
+                if all_text.strip():
+                    st.session_state.knowledge_base_text = all_text
+                    st.session_state.vector_store = create_vector_store(all_text, openai_api_key)
+                    
+                    if st.session_state.vector_store:
+                        st.session_state.kb_processed = True
+                        st.success(f"✅ Successfully processed {len(all_text):,} characters!")
+                        st.balloons()
+                    else:
+                        st.error("❌ Failed to create vector store")
+                else:
+                    st.warning("⚠️ No content to process. Please upload files or enter URLs.")
+    
+    # Knowledge base status
+    st.markdown("---")
+    st.markdown("**📊 Knowledge Base Status**")
+    
+    if st.session_state.vector_store:
+        st.success("✅ Active")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Size", f"{len(st.session_state.knowledge_base_text):,}")
+        with col2:
+            num_docs = st.session_state.vector_store.index.ntotal if st.session_state.vector_store else 0
+            st.metric("Docs", num_docs)
+    else:
+        st.info("ℹ️ Not loaded")
+    
+    # Export section
+    st.markdown("---")
+    st.markdown("**📥 Export Data**")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💬 Chats", use_container_width=True):
+            if st.session_state.chat_history:
+                df = pd.DataFrame(st.session_state.chat_history)
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "⬇️ Download",
+                    csv,
+                    "chat_history.csv",
+                    "text/csv",
+                    use_container_width=True
+                )
+    
+    with col2:
+        if st.button("🎫 Tickets", use_container_width=True):
+            if st.session_state.tickets:
+                df = pd.DataFrame(st.session_state.tickets)
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "⬇️ Download",
+                    csv,
+                    "tickets.csv",
+                    "text/csv",
+                    use_container_width=True
+                )
+    
+    # Clear data
+    st.markdown("---")
+    if st.button("🗑️ Clear All Data", type="secondary", use_container_width=True):
+        if st.button("⚠️ Confirm Clear All", type="primary", use_container_width=True):
+            st.session_state.chat_history = []
+            st.session_state.tickets = []
+            st.session_state.analytics = {
+                'total_queries': 0,
+                'answered': 0,
+                'escalated': 0,
+                'languages': {'English': 0, 'Hindi': 0, 'Marathi': 0, 'Other': 0},
+                'categories': {'Billing': 0, 'Technical': 0, 'General': 0, 'Product': 0}
+            }
+            st.session_state.feedback = {}
+            st.session_state.channel_stats = {
+                'Website': 0,
+                'WhatsApp': 0,
+                'Email': 0,
+                'Manual': 0
+            }
+            
+            conn = st.session_state.db_conn
+            c = conn.cursor()
+            c.execute("DELETE FROM chat_history")
+            c.execute("DELETE FROM tickets")
+            c.execute("DELETE FROM feedback")
+            c.execute("DELETE FROM analytics")
+            conn.commit()
+            
+            st.success("✅ All data cleared!")
+            time.sleep(1)
+            st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.caption("💡 Supports: PDF, DOCX, Excel (XLSX/XLS), Images (OCR), Web URLs")
+# Main page header
+st.markdown('<div class="main-header">🤖 AI Customer Support Agent Pro</div>', unsafe_allow_html=True)
 
-# Main page
-st.markdown('<div class="main-header">🤖 Multi-Channel Customer Support AI Agent</div>', unsafe_allow_html=True)
-
-# Quick Contact Banner
+# Contact banner
 st.markdown(f"""
-<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
-    <h3 style='color: white; text-align: center; margin-bottom: 15px;'>📞 Contact Us Directly</h3>
+<div class="contact-banner">
+    <h3 style='color: white; text-align: center; margin-bottom: 20px; font-size: 1.8rem;'>
+        📞 Get Support Instantly
+    </h3>
     <div style='display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;'>
-        <div style='background: white; padding: 15px; border-radius: 8px; text-align: center; min-width: 250px;'>
-            <h4 style='margin-top: 0;'>📧 Email Support</h4>
-            <p style='color: #555; font-size: 14px; margin: 10px 0;'>{st.session_state.gmail_config['email']}</p>
+        <div class="contact-card">
+            <h4>📧 Email Support</h4>
+            <p>{st.session_state.gmail_config['email']}</p>
+            <small style='color: #6C757D;'>24/7 Response</small>
         </div>
-        <div style='background: white; padding: 15px; border-radius: 8px; text-align: center; min-width: 250px;'>
-            <h4 style='margin-top: 0;'>💬 WhatsApp Support</h4>
-            <p style='color: #555; font-size: 14px; margin: 10px 0;'>{st.session_state.whatsapp_config['phone_number']}</p>
+        <div class="contact-card">
+            <h4>💬 WhatsApp Support</h4>
+            <p>{st.session_state.whatsapp_config['phone_number']}</p>
+            <small style='color: #6C757D;'>Instant Messaging</small>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Channel Overview
+# Channel metrics
+st.markdown("### 📊 Channel Overview")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("🌐 Website", st.session_state.channel_stats.get('Website', 0))
+    st.metric("🌐 Website", st.session_state.channel_stats.get('Website', 0), delta=None)
 with col2:
-    st.metric("💬 WhatsApp", st.session_state.channel_stats.get('WhatsApp', 0))
+    st.metric("💬 WhatsApp", st.session_state.channel_stats.get('WhatsApp', 0), delta=None)
 with col3:
-    st.metric("📧 Email", st.session_state.channel_stats.get('Email', 0))
+    st.metric("📧 Email", st.session_state.channel_stats.get('Email', 0), delta=None)
 with col4:
-    st.metric("👤 Manual", st.session_state.channel_stats.get('Manual', 0))
+    st.metric("👤 Manual", st.session_state.channel_stats.get('Manual', 0), delta=None)
 
 st.markdown("---")
 
@@ -760,84 +1189,95 @@ st.markdown("---")
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💬 Website Chat", 
     "📱 WhatsApp Support", 
-    "📧 Gmail Management",
-    "🎫 Ticket Management", 
-    "📊 Analytics Dashboard"
+    "📧 Email Management",
+    "🎫 Ticket System", 
+    "📊 Analytics"
 ])
 
 # Tab 1: Website Chat Agent
 with tab1:
-    st.header("Website Chat Interface")
-    st.caption("🌐 Customers chat directly on your website")
+    st.markdown('<div class="sub-header">💬 Live Chat Interface</div>', unsafe_allow_html=True)
+    st.caption("🌐 Real-time customer support on your website")
     
     if not st.session_state.vector_store:
-        st.info("ℹ️ Please upload and process knowledge base files in the sidebar first.")
+        st.markdown('<div class="info-box">ℹ️ Please upload and process knowledge base files in the sidebar to enable AI chat.</div>', unsafe_allow_html=True)
     elif not openai_api_key:
-        st.warning("⚠️ Please enter your OpenAI API key in the sidebar.")
+        st.markdown('<div class="warning-box">⚠️ Please enter your OpenAI API key in the sidebar to activate the AI agent.</div>', unsafe_allow_html=True)
     else:
+        # Chat container
         chat_container = st.container()
         
         with chat_container:
             for i, chat in enumerate(st.session_state.chat_history):
                 if chat['role'] == 'user':
-                    st.markdown(f'<div class="chat-message user-message">👤 **You:** {chat["message"]}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="chat-message user-message">'
+                        f'<strong>👤 Customer:</strong><br>{chat["message"]}'
+                        f'<br><small style="color: #6C757D;">🌍 {chat.get("language", "English")} | '
+                        f'📂 {chat.get("category", "General")}</small>'
+                        f'</div>', 
+                        unsafe_allow_html=True
+                    )
                 else:
                     confidence = chat.get('confidence', 0)
-                    if confidence >= 0.7:
-                        conf_class = "confidence-high"
-                        conf_emoji = "🟢"
-                    elif confidence >= 0.5:
-                        conf_class = "confidence-medium"
-                        conf_emoji = "🟡"
-                    else:
-                        conf_class = "confidence-low"
-                        conf_emoji = "🔴"
-                    
                     response_time = chat.get('response_time', 0)
+                    confidence_badge = get_confidence_badge(confidence)
                     
                     st.markdown(
                         f'<div class="chat-message bot-message">'
-                        f'🤖 **AI:** {chat["message"]}<br>'
-                        f'<small>{conf_emoji} Confidence: <span class="{conf_class}">{confidence:.1%}</span> | '
-                        f'⏱️ {response_time:.2f}s</small>'
+                        f'<strong>🤖 AI Agent:</strong><br>{chat["message"]}<br><br>'
+                        f'<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">'
+                        f'{confidence_badge}'
+                        f'<span style="color: #6C757D;">⏱️ {response_time:.2f}s</span>'
+                        f'</div>'
                         f'</div>', 
                         unsafe_allow_html=True
                     )
                     
+                    # Feedback buttons
                     if i not in st.session_state.feedback:
                         col1, col2, col3 = st.columns([1, 1, 10])
                         with col1:
-                            if st.button("👍", key=f"up_{i}"):
+                            if st.button("👍 Helpful", key=f"up_{i}"):
                                 st.session_state.feedback[i] = 'positive'
                                 st.rerun()
                         with col2:
-                            if st.button("👎", key=f"down_{i}"):
+                            if st.button("👎 Not Helpful", key=f"down_{i}"):
                                 st.session_state.feedback[i] = 'negative'
                                 st.rerun()
                     else:
                         if st.session_state.feedback[i] == 'positive':
-                            st.success("✓ Marked as helpful")
+                            st.markdown('<div class="success-box">✓ Marked as helpful - Thank you for your feedback!</div>', unsafe_allow_html=True)
                         else:
-                            st.error("✗ Marked as not helpful")
+                            st.markdown('<div class="warning-box">✗ Marked as not helpful - We\'ll improve our responses</div>', unsafe_allow_html=True)
         
+        # Input form
+        st.markdown("---")
         with st.form(key="chat_form", clear_on_submit=True):
-            col1, col2 = st.columns([4, 1])
+            col1, col2 = st.columns([5, 1])
             with col1:
-                user_input = st.text_input("Ask your question:", placeholder="Type your question here...")
+                user_input = st.text_input(
+                    "Your message:", 
+                    placeholder="Type your question here...",
+                    label_visibility="collapsed"
+                )
             with col2:
-                submit_button = st.form_submit_button("Send 🚀", use_container_width=True)
+                submit_button = st.form_submit_button("Send 🚀", use_container_width=True, type="primary")
         
         if submit_button and user_input:
             start_time = time.time()
             
+            # Detect language and category
             language = detect_language(user_input)
             category = categorize_query(user_input)
             
+            # Update analytics
             st.session_state.analytics['total_queries'] += 1
             st.session_state.analytics['languages'][language] = st.session_state.analytics['languages'].get(language, 0) + 1
             st.session_state.analytics['categories'][category] += 1
             st.session_state.channel_stats['Website'] += 1
             
+            # Save user message
             user_chat = {
                 'role': 'user',
                 'message': user_input,
@@ -848,7 +1288,8 @@ with tab1:
             st.session_state.chat_history.append(user_chat)
             save_chat_to_db(user_chat)
             
-            with st.spinner(f"Thinking... ({language} detected)"):
+            # Get AI response
+            with st.spinner(f"🤔 Thinking... (Detected: {language})"):
                 answer, confidence, source_docs = get_ai_response(
                     user_input, 
                     st.session_state.vector_store, 
@@ -858,15 +1299,18 @@ with tab1:
             
             response_time = time.time() - start_time
             
+            # Check if escalation needed
             if confidence < 0.6:
                 ticket_id = create_ticket(user_input, language, category, confidence, 'Website')
-                escalation_msg = f"\n\n⚠️ **Note:** Your query has been escalated to our support team. Ticket ID: `{ticket_id}` | Priority: {assign_priority(confidence, category)}"
+                priority = assign_priority(confidence, category)
+                escalation_msg = f"\n\n⚠️ **Escalation Notice:** Your query has been forwarded to our support team for personalized assistance.\n\n📋 **Ticket Details:**\n- Ticket ID: `{ticket_id}`\n- Priority: {priority}\n- Expected Response: Within 24 hours"
                 if language != 'English':
                     escalation_msg = translate_text(escalation_msg, language)
                 answer += escalation_msg
             else:
                 st.session_state.analytics['answered'] += 1
             
+            # Save bot response
             bot_chat = {
                 'role': 'bot',
                 'message': answer,
@@ -885,80 +1329,84 @@ with tab1:
 
 # Tab 2: WhatsApp Support
 with tab2:
-    st.header("📱 WhatsApp Support Integration")
-    st.caption(f"Connected to: {st.session_state.whatsapp_config['phone_number']}")
+    st.markdown('<div class="sub-header">📱 WhatsApp Integration</div>', unsafe_allow_html=True)
+    st.caption(f"Connected: {st.session_state.whatsapp_config['phone_number']}")
     
     st.markdown("---")
     
-    # Quick WhatsApp Link
-    st.subheader("🚀 Quick Chat Link")
-    st.info("💡 Click the button below to open WhatsApp chat with our support number")
-    
-    col1, col2 = st.columns([2, 1])
+    # Quick chat link
+    col1, col2 = st.columns([3, 1])
     with col1:
+        st.markdown("### 🚀 Quick Chat Link")
         quick_message = st.text_input(
             "Pre-fill message (optional)", 
-            placeholder="Hello, I need help with..."
+            placeholder="Hello, I need assistance with..."
         )
     with col2:
         st.write("")
         st.write("")
-        wa_link = open_whatsapp_chat(quick_message if quick_message else "Hello, I need support!")
-        st.markdown(f'<a href="{wa_link}" target="_blank" class="whatsapp-button">💬 Open WhatsApp Chat</a>', 
-                   unsafe_allow_html=True)
+        wa_link = open_whatsapp_chat(quick_message if quick_message else "Hello! I need support.")
+        st.markdown(
+            f'<a href="{wa_link}" target="_blank" class="whatsapp-button">💬 Open WhatsApp</a>', 
+            unsafe_allow_html=True
+        )
     
     st.markdown("---")
     
-    # Process incoming WhatsApp message simulation
-    st.subheader("📥 Process WhatsApp Queries (AI Auto-Response)")
+    # Process incoming messages
+    st.markdown("### 📥 Process Customer Queries")
     
     with st.form("whatsapp_form"):
         col1, col2 = st.columns([3, 1])
         with col1:
-            wa_message = st.text_area("Customer WhatsApp Message", placeholder="Customer query here...", height=100)
+            wa_message = st.text_area(
+                "Customer WhatsApp Message", 
+                placeholder="Enter customer query here...", 
+                height=120
+            )
         with col2:
-            wa_phone = st.text_input("Customer Phone", placeholder="+91XXXXXXXXXX")
+            wa_phone = st.text_input("Customer Phone", placeholder="+1234567890")
         
-        process_wa = st.form_submit_button("🤖 Generate AI Response", type="primary")
+        process_wa = st.form_submit_button("🤖 Generate AI Response", type="primary", use_container_width=True)
     
     if process_wa and wa_message and openai_api_key and st.session_state.vector_store:
-        with st.spinner("Processing WhatsApp message..."):
+        with st.spinner("🔄 Processing WhatsApp message..."):
             answer, confidence, ticket_id = process_multi_channel_query(
                 wa_message, 
                 'WhatsApp', 
                 openai_api_key
             )
             
-            st.success("✅ AI Response Generated!")
+            st.markdown('<div class="success-box">✅ AI Response Generated Successfully!</div>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("**📨 Customer Message:**")
+                st.markdown("**📨 Customer Message**")
                 st.info(wa_message)
             with col2:
-                st.markdown("**🤖 AI Response:**")
+                st.markdown("**🤖 AI Response**")
                 st.success(answer)
             
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Confidence", f"{confidence:.1%}")
+                st.metric("Confidence Score", f"{confidence:.1%}")
             with col2:
-                st.metric("Status", "Escalated" if ticket_id else "Resolved")
+                st.metric("Status", "Escalated ⚠️" if ticket_id else "Resolved ✅")
             with col3:
                 if ticket_id:
                     st.metric("Ticket ID", ticket_id)
             
-            # Create WhatsApp send link
-            st.markdown("---")
-            st.subheader("📤 Send Response via WhatsApp")
-            
+            # Send response link
             if wa_phone:
+                st.markdown("---")
+                st.markdown("### 📤 Send Response")
                 send_link = create_whatsapp_link(wa_phone, answer)
-                st.markdown(f'<a href="{send_link}" target="_blank" class="whatsapp-button">💬 Send Response to Customer</a>', 
-                           unsafe_allow_html=True)
-            else:
-                st.warning("Enter customer phone number to generate send link")
+                st.markdown(
+                    f'<a href="{send_link}" target="_blank" class="whatsapp-button">📱 Send to Customer</a>', 
+                    unsafe_allow_html=True
+                )
             
+            # Save interaction
             st.session_state.whatsapp_messages.append({
                 'message': wa_message,
                 'response': answer,
@@ -968,82 +1416,91 @@ with tab2:
                 'timestamp': datetime.now()
             })
     
-    # Recent WhatsApp interactions
+    # Recent interactions
     if st.session_state.whatsapp_messages:
         st.markdown("---")
-        st.subheader("📋 Recent WhatsApp Interactions")
+        st.markdown("### 📋 Recent WhatsApp Interactions")
         
         for idx, msg in enumerate(reversed(st.session_state.whatsapp_messages[-10:])):
-            with st.expander(f"💬 {msg['timestamp'].strftime('%Y-%m-%d %H:%M')} - Confidence: {msg['confidence']:.1%}"):
-                st.write(f"**Phone:** {msg.get('phone', 'N/A')}")
-                st.write(f"**Customer:** {msg['message']}")
-                st.write(f"**AI Response:** {msg['response']}")
-                if msg['ticket_id']:
-                    st.warning(f"Escalated - Ticket: {msg['ticket_id']}")
+            confidence_badge = get_confidence_badge(msg['confidence'])
+            
+            with st.expander(
+                f"💬 {msg['timestamp'].strftime('%Y-%m-%d %H:%M')} | Phone: {msg.get('phone', 'N/A')[:15]}"
+            ):
+                st.markdown(f"**Confidence:** {confidence_badge}", unsafe_allow_html=True)
+                st.markdown(f"**Customer:** {msg['message']}")
+                st.markdown(f"**AI Response:** {msg['response']}")
                 
-                # Quick resend option
+                if msg['ticket_id']:
+                    st.markdown(f'<div class="warning-box">⚠️ Escalated - Ticket: {msg["ticket_id"]}</div>', unsafe_allow_html=True)
+                
                 if msg.get('phone'):
                     resend_link = create_whatsapp_link(msg['phone'], msg['response'])
-                    st.markdown(f'<a href="{resend_link}" target="_blank">📤 Resend This Response</a>', 
-                               unsafe_allow_html=True)
+                    st.markdown(
+                        f'<a href="{resend_link}" target="_blank" class="whatsapp-button">🔄 Resend Response</a>', 
+                        unsafe_allow_html=True
+                    )
 
-# Tab 3: Gmail Management
+# Tab 3: Email Management
 with tab3:
-    st.header("📧 Gmail Auto-Response System")
-    st.caption(f"Connected to: {st.session_state.gmail_config['email']}")
+    st.markdown('<div class="sub-header">📧 Email Auto-Response System</div>', unsafe_allow_html=True)
+    st.caption(f"Connected: {st.session_state.gmail_config['email']}")
     
-    # Gmail App Password Configuration
-    with st.expander("⚙️ Gmail Configuration", expanded=False):
-        st.info("""
-        **How to setup:**
-        1. Go to your Google Account settings
-        2. Enable 2-Step Verification
-        3. Generate an App Password for 'Mail'
-        4. Enter the 16-character app password below
-        """)
+    # Gmail configuration
+    with st.expander("⚙️ Gmail Setup Guide", expanded=False):
+        st.markdown("""
+        <div class="info-box">
+        <strong>📝 Setup Instructions:</strong><br>
+        1. Go to your Google Account settings<br>
+        2. Enable 2-Step Verification<br>
+        3. Navigate to Security → App Passwords<br>
+        4. Generate a new App Password for 'Mail'<br>
+        5. Enter the 16-character password below
+        </div>
+        """, unsafe_allow_html=True)
+        
         gmail_app_password = st.text_input("Gmail App Password", type="password", key="gmail_pwd")
         
         if gmail_app_password:
-            st.success("✅ Gmail credentials configured")
+            st.markdown('<div class="success-box">✅ Gmail credentials configured successfully!</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Check Inbox
-    st.subheader("📬 Check Gmail Inbox")
+    # Check inbox
+    st.markdown("### 📬 Check Inbox")
     
     col1, col2 = st.columns([3, 1])
     with col1:
-        max_emails = st.slider("Number of recent emails to check", 1, 20, 10)
+        max_emails = st.slider("Number of emails to check", 1, 20, 10)
     with col2:
         st.write("")
         st.write("")
-        check_inbox = st.button("🔄 Check Inbox", type="primary")
+        check_inbox = st.button("🔄 Refresh Inbox", type="primary")
     
     if check_inbox and gmail_app_password:
-        with st.spinner("Checking Gmail inbox..."):
+        with st.spinner("🔍 Checking Gmail inbox..."):
             new_emails = check_gmail_inbox(gmail_app_password, max_emails)
             
             if new_emails:
-                st.success(f"✅ Found {len(new_emails)} unread email(s)")
+                st.markdown(f'<div class="success-box">✅ Found {len(new_emails)} unread email(s)</div>', unsafe_allow_html=True)
                 
                 for email_data in new_emails:
-                    with st.expander(f"📧 From: {email_data['from']} - {email_data['subject']}"):
-                        st.write(f"**Subject:** {email_data['subject']}")
-                        st.write(f"**From:** {email_data['from']}")
-                        st.write(f"**Body:**\n{email_data['body'][:500]}...")
+                    with st.expander(f"📧 {email_data['from'][:50]} - {email_data['subject'][:50]}"):
+                        st.markdown(f"**Subject:** {email_data['subject']}")
+                        st.markdown(f"**From:** {email_data['from']}")
+                        st.markdown(f"**Preview:** {email_data['body'][:300]}...")
                         
-                        if st.button(f"🤖 Generate AI Response", key=f"respond_{email_data['id']}"):
-                            with st.spinner("Generating response..."):
+                        if st.button(f"🤖 Generate Response", key=f"respond_{email_data['id']}"):
+                            with st.spinner("⚙️ Generating response..."):
                                 answer, confidence, ticket_id = process_multi_channel_query(
                                     email_data['body'], 
                                     'Email', 
                                     openai_api_key
                                 )
                                 
-                                st.success("Response generated!")
+                                st.markdown('<div class="success-box">✅ Response generated!</div>', unsafe_allow_html=True)
                                 st.write(answer)
                                 
-                                # Add to queue
                                 st.session_state.email_queue.append({
                                     'from': email_data['from'],
                                     'subject': email_data['subject'],
@@ -1055,77 +1512,77 @@ with tab3:
                                     'sent': False
                                 })
             else:
-                st.info("No new unread emails found")
+                st.markdown('<div class="info-box">ℹ️ No new unread emails found</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Manual Email Response
-    st.subheader("✍️ Compose & Send Email Response")
+    # Manual email composition
+    st.markdown("### ✍️ Compose Email Response")
     
     with st.form("email_form"):
         customer_email = st.text_input("Customer Email", placeholder="customer@example.com")
-        email_subject = st.text_input("Email Subject", placeholder="Re: Your inquiry")
-        email_body = st.text_area("Customer's Email Message", placeholder="Customer query...", height=150)
+        email_subject = st.text_input("Subject", placeholder="Re: Your inquiry")
+        email_body = st.text_area("Customer's Email", placeholder="Customer query...", height=150)
         
-        process_email = st.form_submit_button("🤖 Generate AI Response", type="primary")
+        process_email = st.form_submit_button("🤖 Generate AI Response", type="primary", use_container_width=True)
     
     if process_email and email_body and openai_api_key and st.session_state.vector_store:
-        with st.spinner("Processing email..."):
+        with st.spinner("⚙️ Processing email..."):
             answer, confidence, ticket_id = process_multi_channel_query(
                 email_body, 
                 'Email', 
                 openai_api_key
             )
             
-            email_response = f"""Dear Customer,
+            email_response = f"""Dear Valued Customer,
 
-Thank you for contacting us. Here's the response to your inquiry:
+Thank you for reaching out to us. Here is the information regarding your inquiry:
 
 {answer}
 
 Best regards,
-AI Support Team
+Customer Support Team
 {st.session_state.gmail_config['email']}
 
 ---
-This is an automated response. If you need further assistance, please reply to this email.
+This is an automated AI response. For further assistance, please reply to this email or contact our support team directly.
 """
             
             if ticket_id:
-                email_response += f"\n\nYour ticket ID: {ticket_id}"
+                email_response += f"\n\nReference Ticket ID: {ticket_id}"
             
-            st.success("✅ Email Response Generated!")
+            st.markdown('<div class="success-box">✅ Email Response Generated Successfully!</div>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("**📨 Customer Email:**")
+                st.markdown("**📨 Customer Email**")
                 st.info(email_body)
             with col2:
-                st.markdown("**🤖 AI Response:**")
+                st.markdown("**🤖 AI Response**")
                 st.success(answer)
             
-            st.markdown("**📧 Full Email Response:**")
+            st.markdown("**📧 Complete Email Draft**")
             st.code(email_response, language="text")
             
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Confidence", f"{confidence:.1%}")
             with col2:
-                st.metric("Status", "Escalated" if ticket_id else "Resolved")
+                st.metric("Status", "Escalated ⚠️" if ticket_id else "Resolved ✅")
             with col3:
                 if ticket_id:
-                    st.metric("Ticket ID", ticket_id)
+                    st.metric("Ticket", ticket_id)
             
             # Send email
             if gmail_app_password and customer_email:
-                if st.button("📤 Send Email Now", type="primary", key="send_now"):
+                st.markdown("---")
+                if st.button("📤 Send Email Now", type="primary", use_container_width=True):
                     response_subject = f"Re: {email_subject}" if email_subject else "Response to your inquiry"
                     
-                    if send_gmail(customer_email, response_subject, email_response, gmail_app_password):
-                        st.success("✅ Email sent successfully!")
-                        st.balloons()
-            else:
-                st.info("💡 Configure Gmail App Password above to enable email sending")
+                    with st.spinner("📧 Sending email..."):
+                        if send_gmail(customer_email, response_subject, email_response, gmail_app_password):
+                            st.markdown('<div class="success-box">✅ Email sent successfully!</div>', unsafe_allow_html=True)
+                            st.balloons()
             
             st.session_state.email_queue.append({
                 'from': customer_email,
@@ -1138,19 +1595,19 @@ This is an automated response. If you need further assistance, please reply to t
                 'sent': False
             })
     
-    # Email Queue
+    # Email queue
     if st.session_state.email_queue:
         st.markdown("---")
-        st.subheader("📬 Email Queue")
+        st.markdown("### 📬 Email Queue")
         
         email_df = pd.DataFrame([
             {
                 'Time': email['timestamp'].strftime('%Y-%m-%d %H:%M'),
-                'From': email['from'],
-                'Subject': email['subject'][:50] + '...' if len(email['subject']) > 50 else email['subject'],
+                'From': email['from'][:30],
+                'Subject': email['subject'][:40],
                 'Confidence': f"{email['confidence']:.1%}",
-                'Status': 'Escalated' if email['ticket_id'] else 'Resolved',
-                'Sent': '✅' if email.get('sent') else '⏳'
+                'Status': '⚠️ Escalated' if email['ticket_id'] else '✅ Resolved',
+                'Sent': '✅ Yes' if email.get('sent') else '⏳ Pending'
             }
             for email in reversed(st.session_state.email_queue[-20:])
         ])
@@ -1159,9 +1616,10 @@ This is an automated response. If you need further assistance, please reply to t
 
 # Tab 4: Ticket Management
 with tab4:
-    st.header("🎫 Escalated Tickets")
+    st.markdown('<div class="sub-header">🎫 Support Ticket System</div>', unsafe_allow_html=True)
     
     if st.session_state.tickets:
+        # Filters
         col1, col2, col3 = st.columns(3)
         with col1:
             status_filter = st.multiselect(
@@ -1178,8 +1636,8 @@ with tab4:
         with col3:
             category_filter = st.multiselect(
                 "Filter by Category",
-                options=['Billing', 'Technical', 'General'],
-                default=['Billing', 'Technical', 'General']
+                options=['Billing', 'Technical', 'General', 'Product'],
+                default=['Billing', 'Technical', 'General', 'Product']
             )
         
         df_tickets = pd.DataFrame(st.session_state.tickets)
@@ -1190,6 +1648,7 @@ with tab4:
             (df_tickets['category'].isin(category_filter))
         ]
         
+        # Metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Total Tickets", len(df_tickets))
@@ -1199,26 +1658,39 @@ with tab4:
             st.metric("High Priority", len(df_tickets[df_tickets['priority'] == 'High']))
         with col4:
             avg_resolution = df_tickets[df_tickets['resolution_time'].notna()]['resolution_time'].mean()
-            st.metric("Avg Resolution Time", f"{avg_resolution:.1f}h" if not pd.isna(avg_resolution) else "N/A")
+            st.metric("Avg Resolution", f"{avg_resolution:.1f}h" if not pd.isna(avg_resolution) else "N/A")
         
         st.markdown("---")
         
+        # Ticket cards
         for idx, ticket in filtered_df.iterrows():
-            priority_color = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}
+            priority_badge = get_priority_badge(ticket['priority'])
+            status_badge = get_status_badge(ticket['status'])
             
-            with st.expander(f"{priority_color[ticket['priority']]} Ticket #{ticket['id']} - {ticket['status']} ({ticket['priority']} Priority)"):
+            with st.expander(
+                f"Ticket #{ticket['id']} | {ticket['category']} | {ticket['channel']}", 
+                expanded=False
+            ):
+                st.markdown(f"""
+                <div style='margin-bottom: 1rem;'>
+                    {priority_badge} {status_badge}
+                </div>
+                """, unsafe_allow_html=True)
+                
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**Query:** {ticket['query']}")
-                    st.write(f"**Category:** {ticket['category']}")
-                    st.write(f"**Language:** {ticket['language']}")
-                    st.write(f"**Channel:** {ticket['channel']}")
+                    st.markdown(f"**Query:** {ticket['query']}")
+                    st.markdown(f"**Category:** {ticket['category']}")
+                    st.markdown(f"**Language:** {ticket['language']}")
+                    st.markdown(f"**Channel:** {ticket['channel']}")
                 with col2:
-                    st.write(f"**Assigned To:** {ticket['assigned_to']}")
-                    st.write(f"**Created:** {ticket['timestamp']}")
+                    st.markdown(f"**Assigned To:** {ticket['assigned_to']}")
+                    st.markdown(f"**Created:** {ticket['timestamp']}")
                     if ticket['resolved_at']:
-                        st.write(f"**Resolved:** {ticket['resolved_at']}")
-                        st.write(f"**Resolution Time:** {ticket['resolution_time']:.1f}h")
+                        st.markdown(f"**Resolved:** {ticket['resolved_at']}")
+                        st.markdown(f"**Resolution Time:** {ticket['resolution_time']:.1f}h")
+                
+                st.markdown("---")
                 
                 col1, col2, col3 = st.columns([2, 2, 1])
                 with col1:
@@ -1231,14 +1703,15 @@ with tab4:
                 with col2:
                     new_assignee = st.selectbox(
                         "Reassign To",
-                        options=['Agent A', 'Agent B', 'Agent C'],
-                        index=['Agent A', 'Agent B', 'Agent C'].index(ticket['assigned_to']),
+                        options=['Agent A', 'Agent B', 'Agent C', 'Agent D'],
+                        index=['Agent A', 'Agent B', 'Agent C', 'Agent D'].index(ticket['assigned_to']),
                         key=f"assign_{ticket['id']}"
                     )
                 with col3:
                     st.write("")
                     st.write("")
-                    if st.button("Update", key=f"update_{ticket['id']}", type="primary"):
+                    if st.button("💾 Update", key=f"update_{ticket['id']}", type="primary"):
+                        # Calculate resolution time if closing
                         if new_status == 'Closed' and ticket['status'] != 'Closed':
                             created = datetime.strptime(ticket['timestamp'], "%Y-%m-%d %H:%M:%S")
                             resolution_time = (datetime.now() - created).total_seconds() / 3600
@@ -1247,24 +1720,27 @@ with tab4:
                         
                         st.session_state.tickets[idx]['status'] = new_status
                         st.session_state.tickets[idx]['assigned_to'] = new_assignee
-                        st.success(f"Ticket #{ticket['id']} updated!")
+                        
+                        st.markdown('<div class="success-box">✅ Ticket updated successfully!</div>', unsafe_allow_html=True)
+                        time.sleep(1)
                         st.rerun()
     else:
-        st.info("No escalated tickets yet.")
+        st.markdown('<div class="info-box">ℹ️ No tickets have been created yet. Tickets are automatically generated when AI confidence is low.</div>', unsafe_allow_html=True)
 
 # Tab 5: Analytics Dashboard
 with tab5:
-    st.header("📊 Analytics Dashboard")
+    st.markdown('<div class="sub-header">📊 Performance Analytics</div>', unsafe_allow_html=True)
     
     analytics = st.session_state.analytics
     
+    # Key metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Queries", analytics.get('total_queries', 0))
     with col2:
-        st.metric("Answered", analytics.get('answered', 0))
+        st.metric("Answered", analytics.get('answered', 0), delta="Auto-resolved")
     with col3:
-        st.metric("Escalated", analytics.get('escalated', 0))
+        st.metric("Escalated", analytics.get('escalated', 0), delta="Human review")
     with col4:
         total = analytics.get('total_queries', 0)
         answered = analytics.get('answered', 0)
@@ -1273,8 +1749,9 @@ with tab5:
     
     st.markdown("---")
     
+    # Query trends
     if st.session_state.chat_history:
-        st.subheader("📈 Query Trends")
+        st.markdown("### 📈 Query Trends Over Time")
         
         chat_df = pd.DataFrame([
             {
@@ -1294,55 +1771,76 @@ with tab5:
                 hourly_queries,
                 x='hour',
                 y='queries',
-                title="Queries Over Time",
-                labels={'hour': 'Time', 'queries': 'Number of Queries'}
+                title="Customer Queries Timeline",
+                labels={'hour': 'Time', 'queries': 'Number of Queries'},
+                markers=True
+            )
+            fig_timeline.update_traces(line_color='#0066CC', line_width=3)
+            fig_timeline.update_layout(
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(color='#212529')
             )
             st.plotly_chart(fig_timeline, use_container_width=True)
     
     st.markdown("---")
     
+    # Charts
     col1, col2 = st.columns(2)
     
     with col1:
+        st.markdown("### 📊 Query Distribution")
         answered = analytics.get('answered', 0)
         escalated = analytics.get('escalated', 0)
         
         fig_queries = go.Figure(data=[
             go.Bar(
-                x=['Answered', 'Escalated'],
+                x=['Auto-Resolved', 'Escalated'],
                 y=[answered, escalated],
-                marker_color=['#2ecc71', '#e74c3c'],
+                marker_color=['#00A86B', '#DC143C'],
                 text=[answered, escalated],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(size=14, color='white')
             )
         ])
         fig_queries.update_layout(
-            title="Query Distribution",
+            title="Resolution Status",
             xaxis_title="Status",
             yaxis_title="Count",
-            height=300
+            height=350,
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(color='#212529')
         )
         st.plotly_chart(fig_queries, use_container_width=True)
     
     with col2:
+        st.markdown("### 📱 Channel Distribution")
         channel_data = {k: v for k, v in st.session_state.channel_stats.items() if v > 0}
         if channel_data:
+            colors = ['#0066CC', '#25D366', '#EA4335', '#6C757D']
             fig_channel = px.pie(
                 values=list(channel_data.values()),
                 names=list(channel_data.keys()),
-                title="Queries by Channel"
+                title="Queries by Channel",
+                color_discrete_sequence=colors
             )
-            fig_channel.update_layout(height=300)
+            fig_channel.update_layout(
+                height=350,
+                paper_bgcolor='white',
+                font=dict(color='#212529')
+            )
             st.plotly_chart(fig_channel, use_container_width=True)
         else:
-            st.info("No channel data available yet")
+            st.markdown('<div class="info-box">ℹ️ No channel data available yet</div>', unsafe_allow_html=True)
     
     st.markdown("---")
+    
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("Category Breakdown")
-        categories = analytics.get('categories', {'Billing': 0, 'Technical': 0, 'General': 0})
+        st.markdown("### 📂 Category Breakdown")
+        categories = analytics.get('categories', {})
         category_df = pd.DataFrame({
             'Category': list(categories.keys()),
             'Count': list(categories.values())
@@ -1353,100 +1851,65 @@ with tab5:
             x='Category',
             y='Count',
             color='Category',
-            title="Queries by Category"
+            title="Queries by Category",
+            color_discrete_sequence=['#0066CC', '#00A86B', '#FF8C00', '#DC143C']
+        )
+        fig_category.update_layout(
+            height=350,
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(color='#212529'),
+            showlegend=False
         )
         st.plotly_chart(fig_category, use_container_width=True)
     
     with col2:
-        st.subheader("Performance Metrics")
+        st.markdown("### ⚡ Performance Metrics")
         bot_messages = [msg for msg in st.session_state.chat_history if msg['role'] == 'bot']
         
         if bot_messages:
             avg_response_time = sum(msg.get('response_time', 0) for msg in bot_messages) / len(bot_messages)
             avg_confidence = sum(msg.get('confidence', 0) for msg in bot_messages) / len(bot_messages)
             
-            perf_metrics = pd.DataFrame({
-                'Metric': ['Avg Response Time (s)', 'Avg Confidence Score'],
-                'Value': [avg_response_time, avg_confidence]
-            })
-            
             fig_perf = go.Figure(data=[
                 go.Bar(
-                    x=perf_metrics['Metric'],
-                    y=perf_metrics['Value'],
-                    marker_color=['#3498db', '#9b59b6'],
+                    x=['Avg Response Time (s)', 'Avg Confidence'],
+                    y=[avg_response_time, avg_confidence],
+                    marker_color=['#0066CC', '#00A86B'],
                     text=[f"{avg_response_time:.2f}s", f"{avg_confidence:.1%}"],
-                    textposition='auto'
+                    textposition='auto',
+                    textfont=dict(size=14, color='white')
                 )
             ])
             fig_perf.update_layout(
-                title="Average Performance",
-                height=300,
-                yaxis_title="Value"
+                title="System Performance",
+                height=350,
+                yaxis_title="Value",
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(color='#212529')
             )
             st.plotly_chart(fig_perf, use_container_width=True)
         else:
-            st.info("No performance data available yet")
+            st.markdown('<div class="info-box">ℹ️ No performance data available yet</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
 st.markdown(f"""
-<div style='text-align: center; color: #666;'>
-    <p><strong>Multi-Channel AI Customer Support Agent v3.1</strong></p>
-    <p>Powered by OpenAI GPT-3.5, LangChain & FAISS</p>
-    <p><small>📧 Email: {st.session_state.gmail_config['email']} | 💬 WhatsApp: {st.session_state.whatsapp_config['phone_number']}</small></p>
-    <p><small>✅ Features: Website Chat | WhatsApp Integration | Gmail Auto-Response | PDF/DOCX/Excel/Image Processing | 
-    Web Scraping | OCR | Multilingual (EN/HI/MR) | Ticket Management | Real-time Analytics</small></p>
+<div class="footer">
+    <h3 style='color: var(--primary-dark); margin-bottom: 1rem;'>🤖 AI Customer Support Agent Pro v4.0</h3>
+    <p style='font-weight: 600; margin-bottom: 0.5rem;'>Powered by OpenAI GPT-3.5, LangChain & FAISS</p>
+    <p style='margin-bottom: 1rem;'>
+        📧 {st.session_state.gmail_config['email']} | 
+        💬 {st.session_state.whatsapp_config['phone_number']}
+    </p>
+    <div style='background: var(--bg-light); padding: 1rem; border-radius: 8px; margin-top: 1rem;'>
+        <p style='margin: 0; font-size: 0.9rem; color: var(--text-dark);'>
+            <strong>✅ Features:</strong> Multi-Channel Support (Website • WhatsApp • Email) | 
+            AI-Powered Responses | Document Processing (PDF • DOCX • Excel • Images) | 
+            OCR Technology | Web Scraping | Multilingual Support | Smart Ticket Management | 
+            Real-time Analytics | Semantic Search | Auto-Escalation | Performance Tracking
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
-
-# Export data functionality
-with st.sidebar:
-    st.markdown("---")
-    st.subheader("📥 Export Data")
-    
-    if st.button("Export Chat History (CSV)"):
-        if st.session_state.chat_history:
-            df = pd.DataFrame(st.session_state.chat_history)
-            csv = df.to_csv(index=False)
-            st.download_button(
-                "Download CSV",
-                csv,
-                "chat_history.csv",
-                "text/csv"
-            )
-    
-    if st.button("Export Tickets (CSV)"):
-        if st.session_state.tickets:
-            df = pd.DataFrame(st.session_state.tickets)
-            csv = df.to_csv(index=False)
-            st.download_button(
-                "Download CSV",
-                csv,
-                "tickets.csv",
-                "text/csv"
-            )
-    
-    if st.button("🗑️ Clear All Data"):
-        if st.button("⚠️ Confirm Clear", type="primary"):
-            st.session_state.chat_history = []
-            st.session_state.tickets = []
-            st.session_state.analytics = {
-                'total_queries': 0,
-                'answered': 0,
-                'escalated': 0,
-                'languages': {'English': 0, 'Hindi': 0, 'Marathi': 0, 'Other': 0},
-                'categories': {'Billing': 0, 'Technical': 0, 'General': 0}
-            }
-            st.session_state.feedback = {}
-            
-            conn = st.session_state.db_conn
-            c = conn.cursor()
-            c.execute("DELETE FROM chat_history")
-            c.execute("DELETE FROM tickets")
-            c.execute("DELETE FROM feedback")
-            c.execute("DELETE FROM analytics")
-            conn.commit()
-            
-            st.success("All data cleared!")
-            st.rerun()
